@@ -1,0 +1,18 @@
+# Render.com deployment configuration
+services:
+  - type: web
+    name: bullionstar-monitor
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn api:app
+    envVars:
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: GMAIL_ADDRESS
+        sync: false
+      - key: GMAIL_APP_PASSWORD
+        sync: false
+      - key: RECIPIENT_EMAIL
+        sync: false
+      - key: CURRENCY
+        value: JPY

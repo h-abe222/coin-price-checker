@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BullionStar 価格監視システム</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+    </style>
+</head>
+<body class="gradient-bg min-h-screen">
+    <div id="app" class="container mx-auto p-4">
+        <!-- ログイン画面 -->
+        <div id="loginScreen" class="max-w-md mx-auto mt-20">
+            <div class="bg-white rounded-lg shadow-2xl p-8">
+                <h1 class="text-3xl font-bold text-center mb-8">
+                    <i class="fas fa-coins text-yellow-500 mr-2"></i>
+                    BullionStar Monitor
+                </h1>
+                <div class="space-y-4">
+                    <input type="password" id="password" placeholder="パスワード"
+                           class="w-full p-3 border rounded-lg">
+                    <button onclick="login()"
+                            class="w-full bg-purple-600 text-white p-3 rounded-lg hover:bg-purple-700">
+                        ログイン
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- メイン画面 -->
+        <div id="mainScreen" class="hidden">
+            <div class="bg-white rounded-lg shadow-2xl p-6">
+                <div class="flex justify-between items-center mb-6">
+                    <h1 class="text-2xl font-bold">
+                        <i class="fas fa-coins text-yellow-500 mr-2"></i>
+                        価格監視システム
+                    </h1>
+                    <button onclick="logout()" class="text-red-600 hover:text-red-800">
+                        <i class="fas fa-sign-out-alt"></i> ログアウト
+                    </button>
+                </div>
+
+                <!-- タブ -->
+                <div class="border-b mb-6">
+                    <nav class="flex space-x-8">
+                        <button onclick="showTab('products')"
+                                class="tab-btn py-2 px-4 border-b-2 border-purple-600 text-purple-600">
+                            商品一覧
+                        </button>
+                        <button onclick="showTab('add')"
+                                class="tab-btn py-2 px-4 text-gray-600 hover:text-purple-600">
+                            新規登録
+                        </button>
+                        <button onclick="showTab('settings')"
+                                class="tab-btn py-2 px-4 text-gray-600 hover:text-purple-600">
+                            設定
+                        </button>
+                    </nav>
+                </div>
+
+                <!-- 商品一覧タブ -->
+                <div id="productsTab" class="tab-content">
+                    <div class="flex justify-between mb-4">
+                        <h2 class="text-xl font-semibold">監視中の商品</h2>
+                        <button onclick="refreshProducts()"
+                                class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+                            <i class="fas fa-sync-alt"></i> 更新
+                        </button>
+                    </div>
+                    <div id="productsList" class="space-y-4">
+                        <!-- 商品リストがここに表示 -->
+                    </div>
+                </div>
+
+                <!-- 新規登録タブ -->
+                <div id="addTab" class="tab-content hidden">
+                    <h2 class="text-xl font-semibold mb-4">新商品を追加</h2>
+                    <div class="space-y-4">
+                        <input type="text" id="productUrl"
+                               placeholder="BullionStarの商品URL"
+                               class="w-full p-3 border rounded-lg">
+                        <input type="text" id="productName"
+                               placeholder="商品名（オプション）"
+                               class="w-full p-3 border rounded-lg">
+                        <button onclick="addProduct()"
+                                class="w-full bg-green-600 text-white p-3 rounded-lg hover:bg-green-700">
+                            <i class="fas fa-plus"></i> 商品を追加
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 設定タブ -->
+                <div id="settingsTab" class="tab-content hidden">
+                    <h2 class="text-xl font-semibold mb-4">設定</h2>
+                    <div class="bg-gray-50 p-4 rounded-lg">
+                        <p class="text-sm text-gray-600 mb-4">
+                            Supabaseデータベースに接続して商品を管理します。
+                        </p>
+                        <div class="space-y-3">
+                            <div>
+                                <label class="block text-sm font-medium mb-1">Supabase URL</label>
+                                <input type="text" id="supabaseUrl"
+                                       placeholder="https://xxx.supabase.co"
+                                       class="w-full p-2 border rounded">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-1">Supabase Anon Key</label>
+                                <input type="text" id="supabaseKey"
+                                       placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                                       class="w-full p-2 border rounded">
+                            </div>
+                            <button onclick="saveSettings()"
+                                    class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+                                設定を保存
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Supabase設定（ローカルストレージから読み込み）
+        let supabase = null;
+        const ADMIN_PASSWORD = 'admin123';
+
+        // 初期化
+        function initSupabase() {
+            const url = localStorage.getItem('supabaseUrl');
+            const key = localStorage.getItem('supabaseKey');
+
+            if (url && key) {
+                supabase = window.supabase.createClient(url, key);
+                return true;
+            }
+            return false;
+        }
+
+        // ログイン
+        function login() {
+            const password = document.getElementById('password').value;
+            if (password === ADMIN_PASSWORD) {
+                sessionStorage.setItem('authenticated', 'true');
+                document.getElementById('loginScreen').classList.add('hidden');
+                document.getElementById('mainScreen').classList.remove('hidden');
+
+                if (!initSupabase()) {
+                    showTab('settings');
+                    alert('Supabaseの設定を行ってください');
+                } else {
+                    loadProducts();
+                }
+            } else {
+                alert('パスワードが違います');
+            }
+        }
+
+        // ログアウト
+        function logout() {
+            sessionStorage.removeItem('authenticated');
+            location.reload();
+        }
+
+        // タブ切り替え
+        function showTab(tabName) {
+            // すべてのタブを非表示
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.add('hidden');
+            });
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('border-purple-600', 'text-purple-600');
+                btn.classList.add('text-gray-600');
+            });
+
+            // 選択されたタブを表示
+            document.getElementById(tabName + 'Tab').classList.remove('hidden');
+            event.target.classList.add('border-purple-600', 'text-purple-600');
+            event.target.classList.remove('text-gray-600');
+        }
+
+        // 商品一覧を読み込み
+        async function loadProducts() {
+            if (!supabase) {
+                console.log('Supabaseが設定されていません');
+                return;
+            }
+
+            try {
+                const { data, error } = await supabase
+                    .from('products')
+                    .select('*')
+                    .order('created_at', { ascending: false });
+
+                if (error) throw error;
+
+                displayProducts(data || []);
+            } catch (error) {
+                console.error('Error loading products:', error);
+                // デモデータを表示
+                displayProducts([
+                    {
+                        id: 1,
+                        url: 'https://www.bullionstar.com/buy/product/gold-maple-1-2oz',
+                        name: 'Canadian Gold Maple Leaf 1/2 oz',
+                        enabled: true,
+                        current_price: 302142
+                    }
+                ]);
+            }
+        }
+
+        // 商品を表示
+        function displayProducts(products) {
+            const container = document.getElementById('productsList');
+
+            if (products.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-8 text-gray-500">
+                        <i class="fas fa-inbox text-4xl mb-4"></i>
+                        <p>商品が登録されていません</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = products.map(product => `
+                <div class="border rounded-lg p-4 hover:shadow-lg transition-shadow">
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <h3 class="font-semibold">${product.name}</h3>
+                            <p class="text-sm text-gray-600">
+                                <a href="${product.url}" target="_blank" class="text-blue-600 hover:underline">
+                                    商品ページを開く
+                                </a>
+                            </p>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-2xl font-bold text-purple-600">
+                                ¥${(product.current_price || 0).toLocaleString()}
+                            </div>
+                            <div class="mt-2 space-x-2">
+                                <button onclick="toggleProduct(${product.id})"
+                                        class="text-blue-600 hover:text-blue-800">
+                                    <i class="fas fa-power-off"></i>
+                                </button>
+                                <button onclick="deleteProduct(${product.id})"
+                                        class="text-red-600 hover:text-red-800">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // 商品を追加
+        async function addProduct() {
+            const url = document.getElementById('productUrl').value.trim();
+            const name = document.getElementById('productName').value.trim();
+
+            if (!url) {
+                alert('URLを入力してください');
+                return;
+            }
+
+            if (!supabase) {
+                alert('Supabaseが設定されていません');
+                showTab('settings');
+                return;
+            }
+
+            try {
+                const { data, error } = await supabase
+                    .from('products')
+                    .insert([
+                        {
+                            url: url,
+                            name: name || 'New Product',
+                            enabled: true,
+                            current_price: 0
+                        }
+                    ]);
+
+                if (error) throw error;
+
+                alert('商品を追加しました！');
+                document.getElementById('productUrl').value = '';
+                document.getElementById('productName').value = '';
+                showTab('products');
+                loadProducts();
+            } catch (error) {
+                console.error('Error adding product:', error);
+                alert('商品の追加に失敗しました');
+            }
+        }
+
+        // 商品を削除
+        async function deleteProduct(id) {
+            if (!confirm('この商品を削除しますか？')) return;
+
+            if (!supabase) {
+                alert('Supabaseが設定されていません');
+                return;
+            }
+
+            try {
+                const { error } = await supabase
+                    .from('products')
+                    .delete()
+                    .eq('id', id);
+
+                if (error) throw error;
+
+                loadProducts();
+            } catch (error) {
+                console.error('Error deleting product:', error);
+                alert('削除に失敗しました');
+            }
+        }
+
+        // 商品の有効/無効を切り替え
+        async function toggleProduct(id) {
+            alert('この機能は準備中です');
+        }
+
+        // 商品リストを更新
+        function refreshProducts() {
+            loadProducts();
+        }
+
+        // 設定を保存
+        function saveSettings() {
+            const url = document.getElementById('supabaseUrl').value.trim();
+            const key = document.getElementById('supabaseKey').value.trim();
+
+            if (!url || !key) {
+                alert('Supabase URLとAnon Keyを入力してください');
+                return;
+            }
+
+            localStorage.setItem('supabaseUrl', url);
+            localStorage.setItem('supabaseKey', key);
+
+            if (initSupabase()) {
+                alert('設定を保存しました！');
+                showTab('products');
+                loadProducts();
+            } else {
+                alert('設定の保存に失敗しました');
+            }
+        }
+
+        // ページ読み込み時
+        window.onload = function() {
+            if (sessionStorage.getItem('authenticated') === 'true') {
+                document.getElementById('loginScreen').classList.add('hidden');
+                document.getElementById('mainScreen').classList.remove('hidden');
+
+                if (initSupabase()) {
+                    loadProducts();
+                } else {
+                    showTab('settings');
+                }
+
+                // 設定値を表示
+                document.getElementById('supabaseUrl').value = localStorage.getItem('supabaseUrl') || '';
+                document.getElementById('supabaseKey').value = localStorage.getItem('supabaseKey') || '';
+            }
+        };
+    </script>
+</body>
+</html>
