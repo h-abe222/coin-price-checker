@@ -1,1 +1,9 @@
-{}
+{
+    "existing-product": { ... },  ← カンマを忘れずに
+    "gold-buffalo-1oz-various": {
+    "id": 4707,
+    "url": "https://www.bullionstar.com/buy/product/gold-buffalo-1oz-various",
+    "name": "新商品 - gold-buffalo-1oz-various",
+    "enabled": true
+}
+}{}
