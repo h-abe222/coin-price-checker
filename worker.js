@@ -218,12 +218,24 @@ export default {
         const changes = [];
 
         for (const update of updates) {
-          // 商品を更新
-          const result = await env.DB.prepare(
-            `UPDATE products
-             SET current_price = ?, updated_at = CURRENT_TIMESTAMP
-             WHERE key = ?`
-          ).bind(update.price, update.key).run();
+          // 商品を更新（価格、商品名、画像URL）
+          let sql = `UPDATE products SET current_price = ?, updated_at = CURRENT_TIMESTAMP`;
+          let params = [update.price];
+
+          if (update.name) {
+            sql += `, name = ?`;
+            params.push(update.name);
+          }
+
+          if (update.imageUrl) {
+            sql += `, image_url = ?`;
+            params.push(update.imageUrl);
+          }
+
+          sql += ` WHERE key = ?`;
+          params.push(update.key);
+
+          const result = await env.DB.prepare(sql).bind(...params).run();
 
           if (result.meta.changes > 0) {
             // 商品IDを取得

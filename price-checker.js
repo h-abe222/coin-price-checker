@@ -124,7 +124,72 @@ async function fetchPrice(browser, url) {
             });
         }
 
-        return price;
+        // 商品名を取得
+        let productName = null;
+        const nameSelectors = [
+            'h1',
+            '.product-name',
+            '.product-title',
+            '[data-product-name]',
+            '.page-title',
+            'title'
+        ];
+
+        for (const selector of nameSelectors) {
+            try {
+                const element = await page.$(selector);
+                if (element) {
+                    const text = await element.textContent();
+                    if (text && text.trim().length > 0) {
+                        productName = text.trim();
+                        console.log(`Found product name: ${productName}`);
+                        break;
+                    }
+                }
+            } catch (e) {
+                continue;
+            }
+        }
+
+        // 商品画像を取得
+        let imageUrl = null;
+        const imageSelectors = [
+            '.product-image img',
+            '.product-photo img',
+            '.main-image img',
+            '.zoom-image img',
+            'img[data-product-image]',
+            '.product-gallery img',
+            'img[alt*="product"]',
+            '.product-image-main img',
+            'img[src*="product"]',
+            'img[src*="bullionstar"]'
+        ];
+
+        for (const selector of imageSelectors) {
+            try {
+                const element = await page.$(selector);
+                if (element) {
+                    const src = await element.getAttribute('src');
+                    if (src) {
+                        // 相対URLを絶対URLに変換
+                        if (src.startsWith('/')) {
+                            imageUrl = 'https://www.bullionstar.com' + src;
+                        } else if (src.startsWith('http')) {
+                            imageUrl = src;
+                        } else {
+                            imageUrl = 'https://www.bullionstar.com/' + src;
+                        }
+                        console.log(`Found product image: ${imageUrl}`);
+                        break;
+                    }
+                }
+            } catch (e) {
+                continue;
+            }
+        }
+
+        return { price, productName, imageUrl };
     } catch (error) {
         console.error(`Error fetching price from ${url}:`, error);
         return null;
@@ -197,15 +262,30 @@ async function main() {
                 continue;
             }
 
-            const price = await fetchPrice(browser, product.url);
+            const result = await fetchPrice(browser, product.url);
 
-            if (price) {
-                updates.push({
+            if (result && result.price) {
+                const updateData = {
                     key: key,
-                    price: price,
+                    price: result.price,
                     currency: 'JPY'
-                });
-                console.log(`${product.name}: ¥${price.toLocaleString()}`);
+                };
+
+                // 商品名が取得できた場合は含める
+                if (result.productName) {
+                    updateData.name = result.productName;
+                }
+
+                // 画像URLが取得できた場合は含める
+                if (result.imageUrl) {
+                    updateData.imageUrl = result.imageUrl;
+                }
+
+                updates.push(updateData);
+                console.log(`${result.productName || product.name}: ¥${result.price.toLocaleString()}`);
+                if (result.imageUrl) {
+                    console.log(`  Image: ${result.imageUrl}`);
+                }
             } else {
                 console.log(`Failed to get price for: ${product.name}`);
             }
