@@ -19,6 +19,24 @@ async function fetchPrice(browser, url) {
 
     try {
         console.log(`Fetching price from: ${url}`);
+
+        // BullionStarのJPY設定のためクッキーを設定
+        await page.goto('https://www.bullionstar.com/', { waitUntil: 'networkidle', timeout: 30000 });
+
+        // 通貨をJPYに設定
+        try {
+            // 通貨設定ドロップダウンをクリック
+            await page.click('.currency-dropdown, .currency-selector, [data-currency]', { timeout: 5000 });
+            await page.waitForTimeout(1000);
+
+            // JPYオプションを選択
+            await page.click('a[href*="currency=JPY"], [data-currency="JPY"], option[value="JPY"]', { timeout: 5000 });
+            await page.waitForTimeout(2000);
+        } catch (e) {
+            console.log('Currency setting attempt failed, proceeding...');
+        }
+
+        // 商品ページにアクセス
         await page.goto(url, { waitUntil: 'networkidle', timeout: 30000 });
 
         // 価格要素を探す（BullionStarの価格セレクター）
@@ -27,20 +45,59 @@ async function fetchPrice(browser, url) {
             '.price-now',
             '.product-detail-price',
             '[data-price]',
-            '.price'
+            '.price',
+            '.product-price',
+            '#product-price'
         ];
 
         let price = null;
+        let currency = 'JPY';
+
         for (const selector of priceSelectors) {
             try {
                 const element = await page.$(selector);
                 if (element) {
                     const text = await element.textContent();
-                    // 価格を抽出（数字のみ）
+                    console.log(`Price text from ${selector}: ${text}`);
+
+                    // 日本円の価格を優先的に抽出
+                    if (text.includes('¥') || text.includes('JPY')) {
+                        const match = text.match(/¥?\s*([\d,]+)/);
+                        if (match) {
+                            price = parseInt(match[1].replace(/,/g, ''));
+                            currency = 'JPY';
+                            console.log(`Found JPY price with selector ${selector}: ¥${price}`);
+                            break;
+                        }
+                    }
+
+                    // ドル価格の場合は為替換算を試行
+                    if (text.includes('$') || text.includes('USD')) {
+                        const match = text.match(/\$?\s*([\d,]+\.?\d*)/);
+                        if (match) {
+                            const usdPrice = parseFloat(match[1].replace(/,/g, ''));
+                            // 概算レート150円/ドルで換算
+                            price = Math.round(usdPrice * 150);
+                            currency = 'JPY';
+                            console.log(`Found USD price $${usdPrice}, converted to ¥${price}`);
+                            break;
+                        }
+                    }
+
+                    // 通貨記号がない場合の数値
                     const match = text.match(/[\d,]+/);
-                    if (match) {
-                        price = parseInt(match[0].replace(/,/g, ''));
-                        console.log(`Found price with selector ${selector}: ${price}`);
+                    if (match && match[0].length >= 4) {
+                        const numPrice = parseInt(match[0].replace(/,/g, ''));
+                        // 4桁以上で1万以下なら恐らくドル、それ以上なら円
+                        if (numPrice < 10000) {
+                            price = Math.round(numPrice * 150); // ドルと仮定して換算
+                            currency = 'JPY';
+                            console.log(`Found number ${numPrice}, assumed USD, converted to ¥${price}`);
+                        } else {
+                            price = numPrice; // 円と仮定
+                            currency = 'JPY';
+                            console.log(`Found number ${numPrice}, assumed JPY: ¥${price}`);
+                        }
                         break;
                     }
                 }
