@@ -1,4 +1,2 @@
 # GitHub Pages configuration
-baseurl: "/coin-price-checker"
-source: docs
 plugins: []
