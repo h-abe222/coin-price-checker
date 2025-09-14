@@ -4,7 +4,7 @@
 
 ### メイン管理画面
 ```
-https://h-abe222.github.io/coin-price-checker/app.html
+https://h-abe222.github.io/coin-price-checker/
 ```
 
 ### ログイン情報
@@ -172,7 +172,7 @@ A: `data/price_history.json` をダウンロード
 
 1. **管理画面にアクセス**
    ```
-   https://h-abe222.github.io/coin-price-checker/app.html
+   https://h-abe222.github.io/coin-price-checker/
    ```
 
 2. **パスワード入力**
