@@ -1,0 +1,11 @@
+name = "bullionstar-monitor"
+main = "worker.js"
+compatibility_date = "2024-01-01"
+
+[env.production]
+vars = { ADMIN_PASSWORD = "admin123" }
+
+[[kv_namespaces]]
+binding = "PRODUCTS"
+id = "YOUR_KV_NAMESPACE_ID"
+preview_id = "YOUR_KV_PREVIEW_ID"

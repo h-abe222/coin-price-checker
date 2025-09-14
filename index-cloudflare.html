@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BullionStar 価格監視システム - Cloudflare版</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+    </style>
+</head>
+<body class="gradient-bg min-h-screen">
+    <div id="app" class="container mx-auto p-4">
+        <!-- ログイン画面 -->
+        <div id="loginScreen" class="max-w-md mx-auto mt-20">
+            <div class="bg-white rounded-lg shadow-2xl p-8">
+                <h1 class="text-3xl font-bold text-center mb-8">
+                    <i class="fas fa-coins text-yellow-500 mr-2"></i>
+                    BullionStar Monitor
+                </h1>
+                <div class="space-y-4">
+                    <input type="password" id="password" placeholder="パスワード"
+                           class="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-600">
+                    <button onclick="login()"
+                            class="w-full bg-purple-600 text-white p-3 rounded-lg hover:bg-purple-700 transition">
+                        ログイン
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- メイン画面 -->
+        <div id="mainScreen" class="hidden">
+            <div class="bg-white rounded-lg shadow-2xl p-6">
+                <div class="flex justify-between items-center mb-6">
+                    <h1 class="text-2xl font-bold">
+                        <i class="fas fa-coins text-yellow-500 mr-2"></i>
+                        価格監視システム
+                    </h1>
+                    <button onclick="logout()" class="text-red-600 hover:text-red-800">
+                        <i class="fas fa-sign-out-alt"></i> ログアウト
+                    </button>
+                </div>
+
+                <!-- タブ -->
+                <div class="border-b mb-6">
+                    <nav class="flex space-x-8">
+                        <button onclick="showTab('products')" id="productsTabBtn"
+                                class="tab-btn py-2 px-4 border-b-2 border-purple-600 text-purple-600">
+                            商品一覧
+                        </button>
+                        <button onclick="showTab('add')" id="addTabBtn"
+                                class="tab-btn py-2 px-4 text-gray-600 hover:text-purple-600">
+                            新規登録
+                        </button>
+                        <button onclick="showTab('settings')" id="settingsTabBtn"
+                                class="tab-btn py-2 px-4 text-gray-600 hover:text-purple-600">
+                            設定
+                        </button>
+                    </nav>
+                </div>
+
+                <!-- 商品一覧タブ -->
+                <div id="productsTab" class="tab-content">
+                    <div class="flex justify-between mb-4">
+                        <h2 class="text-xl font-semibold">監視中の商品</h2>
+                        <button onclick="refreshProducts()"
+                                class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition">
+                            <i class="fas fa-sync-alt"></i> 更新
+                        </button>
+                    </div>
+                    <div id="productsList" class="space-y-4">
+                        <div class="text-center py-8 text-gray-500">
+                            <i class="fas fa-spinner fa-spin text-4xl"></i>
+                            <p class="mt-2">読み込み中...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 新規登録タブ -->
+                <div id="addTab" class="tab-content hidden">
+                    <h2 class="text-xl font-semibold mb-4">新商品を追加</h2>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">商品URL</label>
+                            <input type="text" id="productUrl"
+                                   placeholder="https://www.bullionstar.com/buy/product/..."
+                                   class="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-600">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">商品名（オプション）</label>
+                            <input type="text" id="productName"
+                                   placeholder="例: Canadian Gold Maple Leaf 1/2 oz"
+                                   class="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-600">
+                        </div>
+                        <button onclick="addProduct()"
+                                class="w-full bg-green-600 text-white p-3 rounded-lg hover:bg-green-700 transition">
+                            <i class="fas fa-plus mr-2"></i>商品を追加
+                        </button>
+                        <div id="addMessage" class="hidden p-4 rounded-lg"></div>
+                    </div>
+                </div>
+
+                <!-- 設定タブ -->
+                <div id="settingsTab" class="tab-content hidden">
+                    <h2 class="text-xl font-semibold mb-4">API設定</h2>
+                    <div class="bg-gray-50 p-4 rounded-lg">
+                        <p class="text-sm text-gray-600 mb-4">
+                            Cloudflare WorkerのAPIエンドポイントを設定してください。
+                        </p>
+                        <div class="space-y-3">
+                            <div>
+                                <label class="block text-sm font-medium mb-1">Worker URL</label>
+                                <input type="text" id="workerUrl"
+                                       placeholder="https://your-worker.username.workers.dev"
+                                       class="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-purple-600">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-1">管理パスワード</label>
+                                <input type="password" id="adminPassword"
+                                       placeholder="admin123"
+                                       class="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-purple-600">
+                            </div>
+                            <button onclick="saveSettings()"
+                                    class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition">
+                                設定を保存
+                            </button>
+                            <div id="settingsMessage" class="hidden mt-2 p-3 rounded"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 設定
+        let API_URL = localStorage.getItem('workerUrl') || '';
+        let ADMIN_PASSWORD = localStorage.getItem('adminPassword') || 'admin123';
+        const LOGIN_PASSWORD = 'admin123';
+
+        // ログイン
+        function login() {
+            const password = document.getElementById('password').value;
+            if (password === LOGIN_PASSWORD) {
+                sessionStorage.setItem('authenticated', 'true');
+                document.getElementById('loginScreen').classList.add('hidden');
+                document.getElementById('mainScreen').classList.remove('hidden');
+
+                if (!API_URL) {
+                    showTab('settings');
+                    showMessage('settingsMessage', 'Worker URLを設定してください', 'warning');
+                } else {
+                    loadProducts();
+                }
+            } else {
+                alert('パスワードが違います');
+            }
+        }
+
+        // ログアウト
+        function logout() {
+            sessionStorage.removeItem('authenticated');
+            location.reload();
+        }
+
+        // タブ切り替え
+        function showTab(tabName) {
+            // すべてのタブコンテンツを非表示
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.add('hidden');
+            });
+
+            // すべてのタブボタンのスタイルをリセット
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('border-purple-600', 'text-purple-600', 'border-b-2');
+                btn.classList.add('text-gray-600');
+            });
+
+            // 選択されたタブを表示
+            document.getElementById(tabName + 'Tab').classList.remove('hidden');
+            const btn = document.getElementById(tabName + 'TabBtn');
+            btn.classList.add('border-purple-600', 'text-purple-600', 'border-b-2');
+            btn.classList.remove('text-gray-600');
+        }
+
+        // メッセージ表示
+        function showMessage(elementId, message, type = 'success') {
+            const element = document.getElementById(elementId);
+            element.classList.remove('hidden', 'bg-green-100', 'bg-red-100', 'bg-yellow-100',
+                                    'text-green-800', 'text-red-800', 'text-yellow-800');
+
+            if (type === 'success') {
+                element.classList.add('bg-green-100', 'text-green-800');
+            } else if (type === 'error') {
+                element.classList.add('bg-red-100', 'text-red-800');
+            } else {
+                element.classList.add('bg-yellow-100', 'text-yellow-800');
+            }
+
+            element.textContent = message;
+            setTimeout(() => {
+                element.classList.add('hidden');
+            }, 5000);
+        }
+
+        // 商品一覧を読み込み
+        async function loadProducts() {
+            if (!API_URL) {
+                document.getElementById('productsList').innerHTML = `
+                    <div class="text-center py-8 text-gray-500">
+                        <i class="fas fa-exclamation-triangle text-4xl mb-4"></i>
+                        <p>APIが設定されていません</p>
+                        <button onclick="showTab('settings')" class="mt-2 text-blue-600 hover:underline">
+                            設定画面へ
+                        </button>
+                    </div>
+                `;
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_URL}/api/products`);
+                const products = await response.json();
+                displayProducts(products);
+            } catch (error) {
+                console.error('Error loading products:', error);
+                document.getElementById('productsList').innerHTML = `
+                    <div class="text-center py-8 text-red-500">
+                        <i class="fas fa-exclamation-circle text-4xl mb-4"></i>
+                        <p>商品の読み込みに失敗しました</p>
+                        <p class="text-sm mt-2">${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+
+        // 商品を表示
+        function displayProducts(products) {
+            const container = document.getElementById('productsList');
+            const productArray = Object.entries(products || {});
+
+            if (productArray.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-8 text-gray-500">
+                        <i class="fas fa-inbox text-4xl mb-4"></i>
+                        <p>商品が登録されていません</p>
+                        <button onclick="showTab('add')" class="mt-2 text-blue-600 hover:underline">
+                            商品を追加
+                        </button>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = productArray.map(([key, product]) => `
+                <div class="border rounded-lg p-4 hover:shadow-lg transition-shadow">
+                    <div class="flex justify-between items-center">
+                        <div class="flex-1">
+                            <h3 class="font-semibold text-lg">${product.name}</h3>
+                            <p class="text-sm text-gray-600 mt-1">
+                                <i class="fas fa-link mr-1"></i>
+                                <a href="${product.url}" target="_blank" class="text-blue-600 hover:underline">
+                                    商品ページを開く
+                                </a>
+                            </p>
+                            <p class="text-xs text-gray-500 mt-1">
+                                追加日: ${new Date(product.added_at || Date.now()).toLocaleDateString('ja-JP')}
+                            </p>
+                        </div>
+                        <div class="text-right ml-4">
+                            <div class="text-2xl font-bold text-purple-600">
+                                ¥${(product.current_price || 0).toLocaleString()}
+                            </div>
+                            <div class="mt-2 space-x-2">
+                                <button onclick="toggleProduct('${key}')"
+                                        class="p-2 rounded ${product.enabled ? 'text-green-600' : 'text-gray-400'} hover:bg-gray-100">
+                                    <i class="fas fa-power-off"></i>
+                                </button>
+                                <button onclick="deleteProduct('${key}')"
+                                        class="p-2 rounded text-red-600 hover:bg-gray-100">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // 商品を追加
+        async function addProduct() {
+            const url = document.getElementById('productUrl').value.trim();
+            const name = document.getElementById('productName').value.trim();
+
+            if (!url) {
+                showMessage('addMessage', 'URLを入力してください', 'error');
+                return;
+            }
+
+            if (!API_URL) {
+                showMessage('addMessage', 'APIが設定されていません', 'error');
+                showTab('settings');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_URL}/api/products`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${ADMIN_PASSWORD}`
+                    },
+                    body: JSON.stringify({ url, name })
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    showMessage('addMessage', '商品を追加しました！', 'success');
+                    document.getElementById('productUrl').value = '';
+                    document.getElementById('productName').value = '';
+                    setTimeout(() => {
+                        showTab('products');
+                        loadProducts();
+                    }, 1000);
+                } else {
+                    showMessage('addMessage', result.error || '追加に失敗しました', 'error');
+                }
+            } catch (error) {
+                showMessage('addMessage', `エラー: ${error.message}`, 'error');
+            }
+        }
+
+        // 商品を削除
+        async function deleteProduct(productKey) {
+            if (!confirm('この商品を削除しますか？')) return;
+
+            try {
+                const response = await fetch(`${API_URL}/api/products/${productKey}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': `Bearer ${ADMIN_PASSWORD}`
+                    }
+                });
+
+                if (response.ok) {
+                    loadProducts();
+                } else {
+                    const result = await response.json();
+                    alert(result.error || '削除に失敗しました');
+                }
+            } catch (error) {
+                alert(`エラー: ${error.message}`);
+            }
+        }
+
+        // 商品の有効/無効を切り替え
+        async function toggleProduct(productKey) {
+            try {
+                const response = await fetch(`${API_URL}/api/products/${productKey}/toggle`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${ADMIN_PASSWORD}`
+                    }
+                });
+
+                if (response.ok) {
+                    loadProducts();
+                } else {
+                    const result = await response.json();
+                    alert(result.error || '更新に失敗しました');
+                }
+            } catch (error) {
+                alert(`エラー: ${error.message}`);
+            }
+        }
+
+        // 商品リストを更新
+        function refreshProducts() {
+            loadProducts();
+        }
+
+        // 設定を保存
+        function saveSettings() {
+            const url = document.getElementById('workerUrl').value.trim();
+            const password = document.getElementById('adminPassword').value.trim();
+
+            if (!url) {
+                showMessage('settingsMessage', 'Worker URLを入力してください', 'error');
+                return;
+            }
+
+            localStorage.setItem('workerUrl', url);
+            localStorage.setItem('adminPassword', password || 'admin123');
+
+            API_URL = url;
+            ADMIN_PASSWORD = password || 'admin123';
+
+            showMessage('settingsMessage', '設定を保存しました！', 'success');
+
+            setTimeout(() => {
+                showTab('products');
+                loadProducts();
+            }, 1000);
+        }
+
+        // ページ読み込み時
+        window.onload = function() {
+            if (sessionStorage.getItem('authenticated') === 'true') {
+                document.getElementById('loginScreen').classList.add('hidden');
+                document.getElementById('mainScreen').classList.remove('hidden');
+
+                // 設定値を表示
+                document.getElementById('workerUrl').value = API_URL;
+                document.getElementById('adminPassword').value = ADMIN_PASSWORD;
+
+                if (API_URL) {
+                    loadProducts();
+                } else {
+                    showTab('settings');
+                    showMessage('settingsMessage', 'Worker URLを設定してください', 'warning');
+                }
+            }
+        };
+    </script>
+</body>
+</html>
