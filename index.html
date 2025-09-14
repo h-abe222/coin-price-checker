@@ -6,7 +6,7 @@
     <meta http-equiv="cache-control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="pragma" content="no-cache">
     <meta http-equiv="expires" content="0">
-    <title>BullionStar 価格監視システム - Cloudflare版</title>
+    <title>コイン価格チェッカー - 貴金属価格監視システム</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
@@ -72,9 +72,9 @@
                 <div>
                     <h1 class="text-3xl font-bold flex items-center">
                         <i class="fas fa-coins mr-3"></i>
-                        BullionStar 価格監視システム
+                        コイン価格チェッカー
                     </h1>
-                    <p class="mt-2 text-purple-100">金・銀価格の自動監視と通知管理</p>
+                    <p class="mt-2 text-purple-100">貴金属・コイン価格の自動監視システム</p>
                 </div>
                 <button onclick="logout()" class="bg-purple-700 hover:bg-purple-800 px-4 py-2 rounded-lg flex items-center transition">
                     <i class="fas fa-sign-out-alt mr-2"></i>ログアウト
@@ -87,11 +87,11 @@
             <div class="bg-white rounded-lg card-shadow p-6 mb-8">
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
                     <div class="text-center">
-                        <div class="text-gray-600 text-sm">監視中の商品</div>
+                        <div class="text-gray-600 text-sm">監視中のアイテム</div>
                         <div class="text-3xl font-bold text-purple-600" id="activeCount">0</div>
                     </div>
                     <div class="text-center">
-                        <div class="text-gray-600 text-sm">登録商品総数</div>
+                        <div class="text-gray-600 text-sm">登録アイテム数</div>
                         <div class="text-3xl font-bold text-gray-800" id="totalCount">0</div>
                     </div>
                     <div class="text-center">
@@ -117,7 +117,7 @@
                     <nav class="flex">
                         <button onclick="showTab('products')" id="productsTabBtn"
                                 class="tab-btn px-6 py-4 text-purple-600 font-semibold border-b-2 border-purple-600">
-                            <i class="fas fa-list mr-2"></i>商品一覧
+                            <i class="fas fa-list mr-2"></i>アイテム一覧
                         </button>
                         <button onclick="showTab('add')" id="addTabBtn"
                                 class="tab-btn px-6 py-4 text-gray-600 hover:text-purple-600">
@@ -133,7 +133,7 @@
                 <!-- 商品一覧タブ -->
                 <div id="productsTab" class="tab-content p-6">
                     <div class="flex justify-between mb-4">
-                        <h2 class="text-xl font-semibold">監視中の商品</h2>
+                        <h2 class="text-xl font-semibold">監視中のコイン・貴金属</h2>
                         <button onclick="refreshProducts()"
                                 class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition">
                             <i class="fas fa-sync-alt"></i> 更新
@@ -149,23 +149,23 @@
 
                 <!-- 新規登録タブ -->
                 <div id="addTab" class="tab-content hidden p-6">
-                    <h2 class="text-xl font-semibold mb-4">新商品を追加</h2>
+                    <h2 class="text-xl font-semibold mb-4">新しいコイン・貴金属を追加</h2>
                     <div class="space-y-4">
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">商品URL</label>
                             <input type="text" id="productUrl"
-                                   placeholder="https://www.bullionstar.com/buy/product/..."
+                                   placeholder="https://www.bullionstar.com/buy/product/... または他の貴金属サイト"
                                    class="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-600">
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">商品名（オプション）</label>
                             <input type="text" id="productName"
-                                   placeholder="例: Canadian Gold Maple Leaf 1/2 oz"
+                                   placeholder="例: American Gold Eagle 1oz、Silver Maple Leaf 1oz など"
                                    class="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-600">
                         </div>
                         <button onclick="addProduct()"
                                 class="w-full bg-green-600 text-white p-3 rounded-lg hover:bg-green-700 transition">
-                            <i class="fas fa-plus mr-2"></i>商品を追加
+                            <i class="fas fa-plus mr-2"></i>コイン・貴金属を追加
                         </button>
                         <div id="addMessage" class="hidden p-4 rounded-lg"></div>
                     </div>
@@ -205,7 +205,7 @@
         <!-- フッター -->
         <footer class="bg-gray-800 text-white py-6 mt-12">
             <div class="max-w-7xl mx-auto px-4 text-center">
-                <p>BullionStar Price Monitor - Cloudflare D1版</p>
+                <p>コイン価格チェッカー - Cloudflare D1版</p>
                 <p class="mt-2 text-sm text-gray-400">
                     Powered by Cloudflare Workers & D1 Database
                 </p>

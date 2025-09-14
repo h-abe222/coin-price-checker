@@ -153,40 +153,66 @@ async function fetchPrice(browser, url) {
 
         // 商品画像を取得
         let imageUrl = null;
-        const imageSelectors = [
-            '.product-image img',
-            '.product-photo img',
-            '.main-image img',
-            '.zoom-image img',
-            'img[data-product-image]',
-            '.product-gallery img',
-            'img[alt*="product"]',
-            '.product-image-main img',
-            'img[src*="product"]',
-            'img[src*="bullionstar"]'
-        ];
+        console.log('Searching for product images...');
 
-        for (const selector of imageSelectors) {
-            try {
-                const element = await page.$(selector);
-                if (element) {
-                    const src = await element.getAttribute('src');
-                    if (src) {
-                        // 相対URLを絶対URLに変換
-                        if (src.startsWith('/')) {
-                            imageUrl = 'https://www.bullionstar.com' + src;
-                        } else if (src.startsWith('http')) {
-                            imageUrl = src;
-                        } else {
-                            imageUrl = 'https://www.bullionstar.com/' + src;
-                        }
-                        console.log(`Found product image: ${imageUrl}`);
-                        break;
-                    }
-                }
-            } catch (e) {
-                continue;
+        try {
+            // BullionStarの商品画像の特定パターンを検索
+            const productImages = await page.$$eval('img', imgs => {
+                return imgs
+                    .filter(img => {
+                        // 商品の名前がalt属性に含まれている画像
+                        const hasProductAlt = img.alt && (
+                            img.alt.includes('Buffalo') ||
+                            img.alt.includes('Maple') ||
+                            img.alt.includes('Panda') ||
+                            img.alt.includes('Merlion') ||
+                            img.alt.includes('Silver') ||
+                            img.alt.includes('Gold') ||
+                            img.alt.includes('Bullion') ||
+                            img.alt.includes('Coin') ||
+                            img.alt.includes('Bar')
+                        ) && !img.alt.includes('thumbnail');
+
+                        // 300x300サイズの画像（高解像度商品画像）
+                        const isLargeProductImage = img.width === 300 && img.height === 300;
+
+                        // BullionStarの商品画像URLパターン
+                        const hasProductUrl = img.src && (
+                            img.src.includes('/files/') &&
+                            (img.src.includes('300_300') || img.src.includes('coin') || img.src.includes('bar'))
+                        );
+
+                        return hasProductAlt || isLargeProductImage || hasProductUrl;
+                    })
+                    .map(img => ({
+                        src: img.src,
+                        alt: img.alt,
+                        width: img.width,
+                        height: img.height,
+                        id: img.id
+                    }))
+                    .sort((a, b) => {
+                        // 300x300の画像を最優先
+                        if (a.width === 300 && a.height === 300) return -1;
+                        if (b.width === 300 && b.height === 300) return 1;
+
+                        // 大きい画像を優先
+                        return (b.width * b.height) - (a.width * a.height);
+                    });
+            });
+
+            console.log('Product images found:', JSON.stringify(productImages, null, 2));
+
+            if (productImages.length > 0) {
+                const selectedImage = productImages[0];
+                imageUrl = selectedImage.src;
+                console.log(`Selected product image: ${imageUrl} (${selectedImage.width}x${selectedImage.height})`);
+            } else {
+                console.log('No product images found with the expected patterns');
             }
+
+        } catch (e) {
+            console.log('Error searching for images:', e.message);
         }
 
         return { price, productName, imageUrl };
