@@ -49,18 +49,32 @@ https://h-abe222.github.io/coin-price-checker/app.html
 
    | Name | Value | 説明 |
    |------|-------|------|
-   | `GMAIL_ADDRESS` | your@gmail.com | 送信元Gmail |
-   | `GMAIL_APP_PASSWORD` | xxxx xxxx xxxx xxxx | Gmailアプリパスワード |
+   | `GMAIL_ADDRESS` | info@ybx.jp | 送信元メール（Google Workspace） |
+   | `GMAIL_APP_PASSWORD` | xxxx xxxx xxxx xxxx | Google Workspaceアプリパスワード |
    | `RECIPIENT_EMAIL` | notify@example.com | 通知先メール |
    | `ADMIN_PASSWORD` | 任意のパスワード | 管理画面パスワード |
    | `CURRENCY` | JPY | 通貨（JPY/SGD/USD） |
 
-### ステップ2: Gmailアプリパスワードの取得
+### ステップ2: Google Workspace (info@ybx.jp) アプリパスワードの取得
 
-1. [Googleアカウント設定](https://myaccount.google.com/)にアクセス
-2. セキュリティ → 2段階認証を有効化
-3. [アプリパスワード](https://myaccount.google.com/apppasswords)を生成
-4. 生成された16文字のパスワードをコピー
+1. info@ybx.jp でGoogleアカウントにログイン
+   - https://accounts.google.com
+   - info@ybx.jp とそのパスワードでログイン
+
+2. セキュリティ設定を開く
+   - https://myaccount.google.com/security
+
+3. 2段階認証プロセスを有効化
+   - 「2段階認証プロセス」をクリック
+   - 電話番号または認証アプリを設定
+
+4. アプリパスワードを生成
+   - https://myaccount.google.com/apppasswords
+   - アプリを選択：「メール」
+   - デバイスを選択：「その他」→「BullionStar」と入力
+   - 生成された16文字のパスワードをコピー
+
+※ Google Workspace管理者権限が必要な場合があります
 
 ### ステップ3: 商品の登録
 
