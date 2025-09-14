@@ -1,0 +1,42 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+.venv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# プロジェクト固有
+.env
+.env.local
+*.log
+logs/
+data/price_history.json
+data/last_alert.json
+data/*.bak
+
+# テスト
+.coverage
+htmlcov/
+.pytest_cache/
+.tox/
+
+# Playwright
+playwright-report/
+test-results/
+
+# 一時ファイル
+*.tmp
+temp/
+tmp/

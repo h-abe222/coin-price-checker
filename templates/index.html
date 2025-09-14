@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BullionStar Price Monitor - 管理画面</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🏆 BullionStar Price Monitor</h1>
+            <p class="subtitle">金・銀価格監視ツール管理画面</p>
+        </header>
+
+        <div class="add-product-section">
+            <h2>新しい商品を追加</h2>
+            <div class="add-form">
+                <input type="url"
+                       id="product-url"
+                       placeholder="BullionStar商品URL (例: https://www.bullionstar.com/buy/product/...)"
+                       class="url-input">
+                <button onclick="testUrl()" class="btn btn-test">URLをテスト</button>
+                <button onclick="addProduct()" class="btn btn-primary">商品を追加</button>
+            </div>
+            <div id="test-result" class="test-result"></div>
+        </div>
+
+        <div class="products-section">
+            <h2>監視中の商品</h2>
+            <div id="products-list" class="products-list">
+                {% for key, product in products.items() %}
+                <div class="product-card" data-key="{{ key }}">
+                    <div class="product-header">
+                        <h3>{{ product.name }}</h3>
+                        <div class="product-actions">
+                            <label class="switch">
+                                <input type="checkbox"
+                                       {% if product.enabled %}checked{% endif %}
+                                       onchange="toggleProduct('{{ key }}')">
+                                <span class="slider"></span>
+                            </label>
+                            <button onclick="deleteProduct('{{ key }}')" class="btn btn-danger">削除</button>
+                        </div>
+                    </div>
+                    <div class="product-info">
+                        <div class="info-row">
+                            <span class="label">商品ID:</span>
+                            <span class="value">{{ product.id }}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="label">現在価格:</span>
+                            <span class="value price">
+                                {% if product.current_price %}
+                                    ¥{{ "{:,.0f}".format(product.current_price) }}
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </span>
+                        </div>
+                        <div class="info-row">
+                            <span class="label">URL:</span>
+                            <a href="{{ product.url }}" target="_blank" class="value link">商品ページを開く</a>
+                        </div>
+                        <div class="info-row">
+                            <span class="label">追加日時:</span>
+                            <span class="value">{{ product.added_at[:10] if product.added_at else '-' }}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="label">ステータス:</span>
+                            <span class="value status {% if product.enabled %}status-active{% else %}status-inactive{% endif %}">
+                                {{ '監視中' if product.enabled else '停止中' }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+
+                {% if not products %}
+                <div class="empty-state">
+                    <p>監視中の商品がありません</p>
+                    <p>上のフォームからBullionStarの商品URLを追加してください</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="settings-section">
+            <h2>設定</h2>
+            <div class="settings-grid">
+                <div class="setting-item">
+                    <label>通貨:</label>
+                    <select id="currency-select" disabled>
+                        <option value="JPY" selected>JPY (日本円)</option>
+                        <option value="SGD">SGD (シンガポールドル)</option>
+                        <option value="USD">USD (米ドル)</option>
+                    </select>
+                </div>
+                <div class="setting-item">
+                    <label>変動閾値:</label>
+                    <input type="number" value="3.0" disabled> %
+                </div>
+                <div class="setting-item">
+                    <label>チェック間隔:</label>
+                    <select disabled>
+                        <option>1日1回</option>
+                        <option>1時間ごと</option>
+                    </select>
+                </div>
+            </div>
+            <p class="note">※設定変更は.envファイルまたはGitHub Secretsで行ってください</p>
+        </div>
+
+        <div class="actions-section">
+            <h2>アクション</h2>
+            <div class="actions-grid">
+                <button onclick="runMonitor()" class="btn btn-large btn-primary">今すぐ価格をチェック</button>
+                <button onclick="viewHistory()" class="btn btn-large">価格履歴を表示</button>
+                <button onclick="testEmail()" class="btn btn-large">テストメールを送信</button>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <p>BullionStar Price Monitor v1.0 | <a href="https://github.com/h-abe222/coin-price-checker" target="_blank">GitHub</a></p>
+    </footer>
+
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>

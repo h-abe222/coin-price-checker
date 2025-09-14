@@ -1,0 +1,55 @@
+name: BullionStar Price Monitor
+
+on:
+  schedule:
+    # 毎日日本時間 9:00 に実行 (UTC 0:00)
+    - cron: '0 0 * * *'
+  workflow_dispatch:  # 手動実行も可能
+
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Cache pip packages
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+
+    - name: Install dependencies
+      run: |
+        pip install --upgrade pip
+        pip install -r requirements.txt
+        playwright install chromium
+        playwright install-deps chromium
+
+    - name: Run monitor
+      env:
+        GMAIL_ADDRESS: ${{ secrets.GMAIL_ADDRESS }}
+        GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+        RECIPIENT_EMAIL: ${{ secrets.RECIPIENT_EMAIL }}
+        PRICE_CHANGE_THRESHOLD: ${{ vars.PRICE_CHANGE_THRESHOLD || '3.0' }}
+      run: |
+        python monitor.py
+
+    - name: Commit price history
+      if: success()
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add data/price_history.json || true
+        git diff --quiet && git diff --staged --quiet || \
+          git commit -m "Update price history [skip ci]"
+        git push || true
