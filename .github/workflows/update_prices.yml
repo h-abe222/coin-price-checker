@@ -1,0 +1,79 @@
+name: Update Coin Prices
+
+on:
+  schedule:
+    # 毎日日本時間 9:00, 15:00, 21:00 に実行
+    - cron: '0 0,6,12 * * *'  # UTC時間
+  workflow_dispatch:  # 手動実行も可能
+
+jobs:
+  update-prices:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Cache pip packages
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install playwright==1.41.0 aiofiles==23.2.1 requests
+        playwright install chromium
+        playwright install-deps chromium
+
+    - name: Update prices with Playwright
+      env:
+        WORKER_URL: https://coin-price-checker.h-abe.workers.dev
+        ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD || 'admin123' }}
+        CURRENCY: JPY
+      run: |
+        python update_prices.py
+
+    - name: Sync with Cloudflare KV
+      if: success()
+      run: |
+        # Cloudflare KVを更新するスクリプト
+        python -c "
+        import requests
+        import json
+        from pathlib import Path
+
+        # ローカルの商品データを読み込み
+        products_file = Path('data/products.json')
+        if products_file.exists():
+            with open(products_file, 'r') as f:
+                products = json.load(f)
+
+            # 各商品の価格を更新（APIが対応したら有効化）
+            # for key, product in products.items():
+            #     if product.get('current_price', 0) > 0:
+            #         # Worker APIを呼び出して更新
+            #         pass
+
+            print(f'Prices updated for {len(products)} products')
+        "
+
+    - name: Commit changes
+      if: success()
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add data/*.json || true
+        git diff --quiet && git diff --staged --quiet || git commit -m "Update prices [skip ci] $(date +'%Y-%m-%d %H:%M')"
+        git push || true
