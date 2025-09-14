@@ -8,3 +8,8 @@ vars = { ADMIN_PASSWORD = "admin123" }
 [[kv_namespaces]]
 binding = "PRODUCTS"
 id = "86a3f08465d14695ad7fde49cf624a96"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "coin-price-db"
+database_id = "bb8e5868-1afa-460b-91ca-6e3de07b2eea"
