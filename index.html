@@ -3,6 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="cache-control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="pragma" content="no-cache">
+    <meta http-equiv="expires" content="0">
     <title>BullionStar 価格監視システム - Cloudflare版</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
@@ -293,6 +296,7 @@
 
         // 商品を追加
         async function addProduct() {
+            console.log('addProduct called - Version: 2024-09-15-fix');
             const url = document.getElementById('productUrl').value.trim();
             const name = document.getElementById('productName').value.trim();
 
@@ -302,10 +306,12 @@
             }
 
             if (!API_URL) {
-                showMessage('addMessage', 'APIが設定されていません', 'error');
+                console.error('API_URL is not set:', API_URL);
+                showMessage('addMessage', 'APIが設定されていません。設定タブでWorker URLを入力してください。', 'error');
                 showTab('settings');
                 return;
             }
+            console.log('API_URL:', API_URL);
 
             try {
                 const response = await fetch(`${API_URL}/api/products`, {
