@@ -1,0 +1,19 @@
+{
+  "name": "coin-price-checker",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "BullionStar price monitoring system with Cloudflare Workers",
+  "scripts": {
+    "check-prices": "node price-checker.js",
+    "deploy": "wrangler deploy",
+    "dev": "wrangler dev",
+    "test": "echo \"No tests yet\""
+  },
+  "dependencies": {
+    "playwright": "^1.40.0",
+    "dotenv": "^16.3.1"
+  },
+  "devDependencies": {
+    "wrangler": "^3.0.0"
+  }
+}

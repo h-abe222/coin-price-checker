@@ -1,119 +1,96 @@
-# Gold Price Monitor (金価格監視ツール)
+# BullionStar 価格監視システム
 
-BullionStar等の金価格を自動監視してメール通知するPythonツール
+Cloudflare Workers + D1 Database + GitHub Actions を使用した金・銀価格の自動監視システム
 
-## 機能
+## 🚀 機能
 
-- 🔍 BullionStarから金価格を自動取得
-- 📧 価格変動時のメール通知
-- 📊 価格履歴の追跡と分析
-- ⚡ GitHub Actionsによる自動実行
-- 🎯 閾値設定による柔軟なアラート
+- **Web管理画面**: 商品の追加・削除・設定をブラウザで完結
+- **自動価格取得**: GitHub Actionsで毎日自動実行
+- **リアルタイム価格**: Playwrightによる正確なスクレイピング
+- **クラウドDB**: Cloudflare D1による高速データベース
+- **洗練されたUI**: レスポンシブ対応の美しいインターフェース
 
-## セットアップ
+## 📱 利用方法
 
-### 1. リポジトリのクローン
+### 1. 管理画面にアクセス
+https://h-abe222.github.io/coin-price-checker/
 
-```bash
-git clone https://github.com/h-abe222/coin-price-checker.git
-cd coin-price-checker
-```
+### 2. ログイン
+- パスワード: `admin123`
 
-### 2. Python環境のセットアップ
+### 3. API設定
+- Worker URL: `https://coin-price-checker.h-abe.workers.dev`
+- 管理パスワード: `admin123`
 
-```bash
-python -m venv venv
-source venv/bin/activate  # Windows: venv\Scripts\activate
-pip install -r requirements.txt
-playwright install chromium
-```
+### 4. 商品管理
+- **新規登録**: BullionStarの商品URLを入力して追加
+- **価格確認**: 自動取得された最新価格を表示
+- **監視設定**: 商品ごとに監視のON/OFF切り替え
 
-### 3. 環境変数の設定
+## ⚙️ 自動実行
 
-`.env.example`をコピーして`.env`を作成：
-
-```bash
-cp .env.example .env
-```
-
-`.env`ファイルを編集：
-
-```env
-GMAIL_ADDRESS=your_email@gmail.com
-GMAIL_APP_PASSWORD=your_app_specific_password
-RECIPIENT_EMAIL=recipient@example.com
-THRESHOLD_PRICE=3000
-```
-
-### 4. Gmailアプリパスワードの取得
-
-1. [Googleアカウント設定](https://myaccount.google.com/)にアクセス
-2. セキュリティ → 2段階認証を有効化
-3. アプリパスワードを生成
-4. 生成されたパスワードを`GMAIL_APP_PASSWORD`に設定
-
-## 使用方法
+### GitHub Actions（推奨）
+- **実行頻度**: 毎日午前9時（日本時間）
+- **手動実行**: GitHubのActionsタブから随時実行可能
+- **設定済み**: 追加設定不要で自動実行
 
 ### ローカル実行
+```bash
+# 手動で価格チェック
+npm run check-prices
+
+# 依存関係インストール
+npm install
+npx playwright install
+```
+
+## 🛠 技術スタック
+
+- **フロントエンド**: HTML5, TailwindCSS, JavaScript
+- **バックエンド**: Cloudflare Workers
+- **データベース**: Cloudflare D1 (SQLite)
+- **価格取得**: Playwright + Chromium
+- **自動実行**: GitHub Actions
+- **ホスティング**: GitHub Pages
+
+## 📊 監視対象
+
+BullionStar (https://www.bullionstar.com) の金・銀製品
+- 金貨・銀貨
+- 金塊・銀塊
+- 記念コイン
+
+## 🔧 設定
+
+### 環境変数
+```env
+WORKER_URL=https://coin-price-checker.h-abe.workers.dev
+ADMIN_PASSWORD=admin123
+```
+
+### GitHub Secrets（自動実行用）
+1. リポジトリの Settings → Secrets → Actions
+2. 以下を追加:
+   - `WORKER_URL`: `https://coin-price-checker.h-abe.workers.dev`
+   - `ADMIN_PASSWORD`: `admin123`
+
+## 📈 価格データ
+
+- **取得頻度**: 1日1回（午前9時）
+- **保存期間**: 無制限（D1データベース）
+- **価格履歴**: 全て記録・表示可能
+- **通貨**: 日本円（JPY）
+
+## 🔄 デプロイ
 
 ```bash
-# 1回だけ実行
-python run_monitor.py --once
+# Cloudflare Workerをデプロイ
+npm run deploy
 
-# 継続的に監視（1時間ごと）
-python run_monitor.py
+# 設定確認
+npx wrangler whoami
 ```
 
-### GitHub Actionsでの自動実行
-
-1. GitHub Secretsを設定：
-   - `GMAIL_ADDRESS`
-   - `GMAIL_APP_PASSWORD`
-   - `RECIPIENT_EMAIL`
-   - `THRESHOLD_PRICE`（オプション）
-
-2. Actionsが自動的に1時間ごとに実行されます
-
-## プロジェクト構造
-
-```
-coin-price-checker/
-├── src/
-│   ├── scrapers/       # スクレイピングモジュール
-│   ├── notifiers/      # 通知モジュール
-│   └── analyzers/      # 分析モジュール
-├── tests/              # テストコード
-├── data/               # 価格履歴データ
-├── .github/workflows/  # GitHub Actions設定
-└── run_monitor.py      # メイン実行スクリプト
-```
-
-## アラート条件
-
-- 閾値アラート: 設定価格を下回った場合
-- 変動率アラート: 24時間で5%以上の変動
-- 最高値/最安値アラート: 7日間の新記録
-
-## 開発
-
-### テスト実行
-
-```bash
-pip install -r requirements-dev.txt
-pytest tests/ -v
-```
-
-### コードフォーマット
-
-```bash
-black src tests
-flake8 src tests --max-line-length=120
-```
-
-## ライセンス
+## 📝 ライセンス
 
 MIT License
-
-## 貢献
-
-プルリクエストを歓迎します。大きな変更の場合は、まずissueを開いて変更内容を議論してください。

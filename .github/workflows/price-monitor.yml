@@ -1,0 +1,39 @@
+name: 価格監視
+
+on:
+  schedule:
+    # 毎日午前9時（日本時間）に実行 (UTC 0:00)
+    - cron: '0 0 * * *'
+  workflow_dispatch: # 手動実行も可能
+
+jobs:
+  check-prices:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: リポジトリをチェックアウト
+      uses: actions/checkout@v4
+
+    - name: Node.jsをセットアップ
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+
+    - name: 依存関係をインストール
+      run: npm install
+
+    - name: Playwrightブラウザをインストール
+      run: npx playwright install --with-deps chromium
+
+    - name: 価格をチェック
+      env:
+        WORKER_URL: ${{ secrets.WORKER_URL }}
+        ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
+      run: npm run check-prices
+
+    - name: 実行結果を通知
+      if: always()
+      run: |
+        echo "価格チェックが完了しました"
+        echo "実行時刻: $(date)"
