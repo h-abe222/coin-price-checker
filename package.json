@@ -4,7 +4,10 @@
   "type": "module",
   "description": "BullionStar price monitoring system with Cloudflare Workers",
   "scripts": {
-    "check-prices": "node price-checker.js",
+    "check-prices": "node cloudflare/price-checker.js",
+    "compare-prices": "node cloudflare/multi-site-price-checker.js",
+    "compare-product": "node cloudflare/multi-site-price-checker.js compare",
+    "list-sites": "node cloudflare/multi-site-price-checker.js sites",
     "deploy": "wrangler deploy",
     "dev": "wrangler dev",
     "test": "echo \"No tests yet\""
