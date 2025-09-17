@@ -57,13 +57,30 @@ export default async function handler(req, res) {
     if (url.includes('bullionstar.com')) {
       // BullionStar - SGD価格（1/2オンス金貨の適正価格範囲で判定）
       const sgdMatches = html.match(/SGD\s*([\d,]+\.?\d*)/g);
+      console.log('BullionStar SGD matches:', sgdMatches ? sgdMatches.slice(0, 5) : 'none');
+
       if (sgdMatches) {
         for (const match of sgdMatches) {
           const sgdPrice = parseFloat(match.replace(/SGD\s*/g, '').replace(/,/g, ''));
+          console.log('SGD price found:', sgdPrice);
           // 1/2オンス金貨の適正価格範囲（SGD 1,000-5,000程度）
           if (sgdPrice > 1000 && sgdPrice < 5000) {
             price = Math.round(sgdPrice * EXCHANGE_RATES.SGD);
+            console.log('Using SGD price:', sgdPrice, '→ JPY:', price);
             break;
+          }
+        }
+      }
+
+      // 価格が見つからない場合、別のパターンを試す
+      if (!price) {
+        const pricePattern = /"price":\s*"?([\d.]+)"?/;
+        const priceMatch = html.match(pricePattern);
+        if (priceMatch) {
+          const sgdPrice = parseFloat(priceMatch[1]);
+          console.log('JSON price found:', sgdPrice);
+          if (sgdPrice > 1000 && sgdPrice < 5000) {
+            price = Math.round(sgdPrice * EXCHANGE_RATES.SGD);
           }
         }
       }
@@ -110,26 +127,26 @@ export default async function handler(req, res) {
       }
     }
 
-    // 汎用価格パターン（フォールバック）
-    if (!price) {
-      const patterns = [
-        { regex: /\$\s*([\d,]+\.?\d*)/, rate: EXCHANGE_RATES.USD },
-        { regex: /€\s*([\d,]+\.?\d*)/, rate: EXCHANGE_RATES.EUR },
-        { regex: /£\s*([\d,]+\.?\d*)/, rate: EXCHANGE_RATES.GBP },
-        { regex: /([\d,]+)\s*円/, rate: 1 }
-      ];
+    // 汎用価格パターン（フォールバック）- 一時的に無効化
+    // if (!price) {
+    //   const patterns = [
+    //     { regex: /\$\s*([\d,]+\.?\d*)/, rate: EXCHANGE_RATES.USD },
+    //     { regex: /€\s*([\d,]+\.?\d*)/, rate: EXCHANGE_RATES.EUR },
+    //     { regex: /£\s*([\d,]+\.?\d*)/, rate: EXCHANGE_RATES.GBP },
+    //     { regex: /([\d,]+)\s*円/, rate: 1 }
+    //   ];
 
-      for (const { regex, rate } of patterns) {
-        const match = html.match(regex);
-        if (match) {
-          const value = parseFloat(match[1].replace(/,/g, ''));
-          if (value > 100) {
-            price = Math.round(value * rate);
-            break;
-          }
-        }
-      }
-    }
+    //   for (const { regex, rate } of patterns) {
+    //     const match = html.match(regex);
+    //     if (match) {
+    //       const value = parseFloat(match[1].replace(/,/g, ''));
+    //       if (value > 100) {
+    //         price = Math.round(value * rate);
+    //         break;
+    //       }
+    //     }
+    //   }
+    // }
 
     if (price && price > 1000 && price < 100000000) {
       return res.status(200).json({

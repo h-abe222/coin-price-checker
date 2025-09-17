@@ -365,14 +365,32 @@ export default {
 
         // 商品一覧を読み込み
         async function loadProducts() {
+            const container = document.getElementById('productsList');
+            if (!container) {
+                console.error('productsList container not found!');
+                return {};
+            }
+
+            // ローディング表示
+            container.innerHTML = '<div class="text-center py-8 text-gray-500"><i class="fas fa-spinner fa-spin text-4xl mb-4"></i><p>読み込み中...</p></div>';
+
             try {
+                console.log('Loading products from:', API_URL + '/api/products');
                 const response = await fetch(API_URL + '/api/products');
+                if (!response.ok) {
+                    console.error('Response not OK:', response.status, response.statusText);
+                    throw new Error('Failed to fetch products: ' + response.status);
+                }
                 const products = await response.json();
+                console.log('Loaded products:', Object.keys(products).length, 'items');
                 currentProducts = products;
                 displayProducts(products);
                 return products;
             } catch (error) {
                 console.error('Error loading products:', error);
+                // エラー時はエラーメッセージを表示
+                container.innerHTML = '<div class="text-center py-8 text-red-500"><i class="fas fa-exclamation-triangle text-4xl mb-4"></i><p>商品の読み込みに失敗しました: ' + error.message + '</p></div>';
+                currentProducts = {};
                 return {};
             }
         }
@@ -380,7 +398,12 @@ export default {
         // 商品を表示
         function displayProducts(products) {
             const container = document.getElementById('productsList');
+            if (!container) {
+                console.error('Products list container not found!');
+                return;
+            }
             const productArray = Object.entries(products || {});
+            console.log('Displaying products:', productArray.length, 'items');
 
             if (productArray.length === 0) {
                 container.innerHTML = \`
@@ -916,7 +939,7 @@ export default {
             button.disabled = true;
 
             try {
-                const response = await fetch(API_URL + '/api/products/' + productKey + '/update-prices', {
+                const response = await fetch(API_URL + '/api/products/' + encodeURIComponent(productKey) + '/update-prices', {
                     method: 'POST',
                     headers: {
                         'Authorization': 'Bearer ' + ADMIN_PASSWORD
@@ -1681,7 +1704,7 @@ export default {
           });
         }
 
-        const productKey = path.split('/')[3];
+        const productKey = decodeURIComponent(path.split('/')[3]);
 
         // 商品を取得
         const { results } = await env.DB.prepare(
@@ -1978,6 +2001,7 @@ export default {
           headers: corsHeaders
         });
       }
+
 
       // 複数サイト商品更新（既存）
       if (path === '/api/update-multi-site-product' && request.method === 'POST') {
