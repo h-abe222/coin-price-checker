@@ -55,7 +55,7 @@ export default async function handler(req, res) {
 
     // サイト別の価格抽出ロジック（シンプル版）
     if (url.includes('bullionstar.com')) {
-      // BullionStar - SGD価格（1/2オンス金貨の適正価格範囲で判定）
+      // BullionStar - SGD価格（1/2オンス金貨 = 約30万円）
       const sgdMatches = html.match(/SGD\s*([\d,]+\.?\d*)/g);
       console.log('BullionStar SGD matches:', sgdMatches ? sgdMatches.slice(0, 5) : 'none');
 
@@ -63,8 +63,8 @@ export default async function handler(req, res) {
         for (const match of sgdMatches) {
           const sgdPrice = parseFloat(match.replace(/SGD\s*/g, '').replace(/,/g, ''));
           console.log('SGD price found:', sgdPrice);
-          // 1/2オンス金貨の適正価格範囲（SGD 1,000-5,000程度）
-          if (sgdPrice > 1000 && sgdPrice < 5000) {
+          // 1/2オンス金貨の適正価格範囲（SGD 2,000-4,000 = 約22万-44万円）
+          if (sgdPrice > 2000 && sgdPrice < 4000) {
             price = Math.round(sgdPrice * EXCHANGE_RATES.SGD);
             console.log('Using SGD price:', sgdPrice, '→ JPY:', price);
             break;
@@ -79,13 +79,13 @@ export default async function handler(req, res) {
         if (priceMatch) {
           const sgdPrice = parseFloat(priceMatch[1]);
           console.log('JSON price found:', sgdPrice);
-          if (sgdPrice > 1000 && sgdPrice < 5000) {
+          if (sgdPrice > 2000 && sgdPrice < 4000) {
             price = Math.round(sgdPrice * EXCHANGE_RATES.SGD);
           }
         }
       }
     } else if (url.includes('apmex.com')) {
-      // APMEX - USD価格（1/2オンス金貨の適正価格範囲）
+      // APMEX - USD価格（1/2オンス金貨 = 約30万円）
       const patterns = [
         /<meta property="product:price:amount" content="([\d.]+)"/,
         /data-price="([\d.]+)"/,
@@ -96,32 +96,33 @@ export default async function handler(req, res) {
         const match = html.match(pattern);
         if (match) {
           const usdPrice = parseFloat(match[1].replace(/,/g, ''));
-          // 1/2オンス金貨の適正価格範囲（USD 800-2,000程度）
-          if (usdPrice > 800 && usdPrice < 2000) {
+          // 1/2オンス金貨の適正価格範囲（USD 1,500-2,500 = 約22.5万-37.5万円）
+          if (usdPrice > 1500 && usdPrice < 2500) {
             price = Math.round(usdPrice * EXCHANGE_RATES.USD);
             break;
           }
         }
       }
     } else if (url.includes('lpm.hk')) {
-      // LPM - HKD価格（1/2オンス金貨の適正価格範囲）
+      // LPM - HKD価格（1/2オンス金貨 = 約30万円）
       const hkdMatches = html.match(/HK\$\s*([\d,]+\.?\d*)/g);
       if (hkdMatches) {
         for (const match of hkdMatches) {
           const hkdPrice = parseFloat(match.replace(/HK\$\s*/g, '').replace(/,/g, ''));
-          // 1/2オンス金貨の適正価格範囲（HKD 8,000-20,000程度）
-          if (hkdPrice > 8000 && hkdPrice < 20000) {
+          // 1/2オンス金貨の適正価格範囲（HKD 12,000-20,000 = 約23万-38万円）
+          if (hkdPrice > 12000 && hkdPrice < 20000) {
             price = Math.round(hkdPrice * EXCHANGE_RATES.HKD);
             break;
           }
         }
       }
     } else if (url.includes('ybx.jp')) {
-      // YBX - 日本円価格（Playwrightが必要な場合があるため簡易版）
+      // YBX - 日本円価格（1/2オンス金貨 = 約30万円）
       const jpyMatch = html.match(/([\d,]+)\s*円/);
       if (jpyMatch) {
         const jpyPrice = parseInt(jpyMatch[1].replace(/,/g, ''));
-        if (jpyPrice > 10000 && jpyPrice < 10000000) {
+        // 1/2オンス金貨の適正価格範囲（20万-40万円）
+        if (jpyPrice > 200000 && jpyPrice < 400000) {
           price = jpyPrice;
         }
       }
