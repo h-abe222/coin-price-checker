@@ -1,15 +1,19 @@
 name = "coin-price-checker"
-main = "worker.js"
+main = "worker-v2.js"
 compatibility_date = "2024-01-01"
 
 [env.production]
-vars = { ADMIN_PASSWORD = "admin123" }
+vars = { ADMIN_PASSWORD = "admin123", VERCEL_API_URL = "https://coin-price-checker.vercel.app/api/fetch-price" }
 
-[[kv_namespaces]]
+[[env.production.kv_namespaces]]
 binding = "PRODUCTS"
 id = "86a3f08465d14695ad7fde49cf624a96"
 
-[[d1_databases]]
+[[env.production.d1_databases]]
 binding = "DB"
 database_name = "coin-price-db"
 database_id = "bb8e5868-1afa-460b-91ca-6e3de07b2eea"
+
+# [triggers]
+# crons = ["*/10 * * * *"]
+# 10分ごとに価格更新チェック - 現在無効化

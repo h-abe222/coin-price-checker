@@ -3,7 +3,7 @@
  * すべてのサイト専用スクレイパーの基底クラス
  */
 
-export class BaseScraper {
+class BaseScraper {
     constructor(browser) {
         this.browser = browser;
         this.exchangeRates = null; // キャッシュ用
@@ -219,3 +219,5 @@ export class BaseScraper {
         return false;
     }
 }
+
+export default BaseScraper;

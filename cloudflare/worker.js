@@ -417,6 +417,69 @@ export default {
             }
         }
 
+        // 価格情報をレンダリング（複数サイト対応）
+        function renderPriceInfo(product) {
+            // 複数サイト価格データがある場合
+            if (product.site_prices && product.total_sites > 1) {
+                try {
+                    const sitePrices = JSON.parse(product.site_prices);
+                    const bestPrice = product.current_price || 0;
+                    const bestSite = product.best_site || '';
+                    const priceSpread = product.price_spread_percent || 0;
+
+                    let priceHtml = \`
+                        <div class="text-right">
+                            <div class="text-2xl font-bold text-purple-600 mb-1">
+                                ¥\${bestPrice.toLocaleString()}
+                            </div>
+                            <div class="text-xs text-green-600 font-semibold mb-2">
+                                🏆 \${bestSite} (最安値)
+                            </div>
+                            <div class="text-xs text-gray-600 mb-2">
+                                価格差: \${priceSpread}% | \${product.total_sites}サイト
+                            </div>
+                            <div class="bg-gray-50 p-2 rounded text-xs">
+                    \`;
+
+                    // 各サイトの価格を表示
+                    Object.entries(sitePrices).forEach(([siteKey, priceData]) => {
+                        const siteName = siteKey.replace(/_/g, '.');
+                        const price = priceData.price || 0;
+                        const isBest = siteName === bestSite;
+
+                        priceHtml += \`
+                            <div class="flex justify-between items-center \${isBest ? 'font-bold text-green-600' : 'text-gray-600'}">
+                                <span>\${isBest ? '🥇' : '  '} \${siteName}:</span>
+                                <span>¥\${price.toLocaleString()}</span>
+                            </div>
+                        \`;
+                    });
+
+                    priceHtml += \`
+                            </div>
+                        </div>
+                    \`;
+
+                    return priceHtml;
+
+                } catch (error) {
+                    console.error('Error parsing site_prices:', error);
+                }
+            }
+
+            // 単一サイト価格または従来形式
+            return \`
+                <div class="text-2xl font-bold text-purple-600 mb-2">
+                    ¥\${(product.current_price || 0).toLocaleString()}
+                </div>
+                \${product.site ? \`
+                    <div class="text-xs text-gray-600 mb-2">
+                        \${product.site}
+                    </div>
+                \` : ''}
+            \`;
+        }
+
         // 商品を表示
         function displayProducts(products) {
             const container = document.getElementById('productsList');
@@ -467,9 +530,7 @@ export default {
                             </div>
                         </div>
                         <div class="text-right ml-4">
-                            <div class="text-2xl font-bold text-purple-600 mb-2">
-                                ¥\${(product.current_price || 0).toLocaleString()}
-                            </div>
+                            \${renderPriceInfo(product)}
                             <div class="mb-2">
                                 \${product.enabled ?
                                     '<span class="bg-green-100 text-green-800 px-2 py-1 rounded text-sm">監視中</span>' :
@@ -907,6 +968,139 @@ export default {
         }), {
           headers: corsHeaders
         });
+      }
+
+      // 複数サイト商品更新（新スキーマ対応）
+      if (path === '/api/update-multi-site-product' && request.method === 'POST') {
+        if (!checkAuth(request, env)) {
+          return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+            status: 401,
+            headers: corsHeaders
+          });
+        }
+
+        const body = await request.json();
+        const {
+          key,
+          name,
+          current_price,
+          currency,
+          site_prices,
+          site_urls,
+          best_site,
+          price_spread_percent,
+          total_sites,
+          image_url,
+          updated_at
+        } = body;
+
+        if (!key) {
+          return new Response(JSON.stringify({ error: 'Product key is required' }), {
+            status: 400,
+            headers: corsHeaders
+          });
+        }
+
+        try {
+          // 商品が既に存在するかチェック
+          const { results: existingProduct } = await env.DB.prepare(
+            "SELECT id FROM products WHERE key = ?"
+          ).bind(key).all();
+
+          let productId;
+
+          if (existingProduct.length > 0) {
+            // 既存商品を更新
+            productId = existingProduct[0].id;
+
+            const updateResult = await env.DB.prepare(
+              `UPDATE products SET
+                 name = ?,
+                 current_price = ?,
+                 currency = ?,
+                 site_prices = ?,
+                 site_urls = ?,
+                 best_site = ?,
+                 price_spread_percent = ?,
+                 total_sites = ?,
+                 image_url = ?,
+                 updated_at = CURRENT_TIMESTAMP
+               WHERE key = ?`
+            ).bind(
+              name || 'Multi-site Product',
+              current_price || 0,
+              currency || 'JPY',
+              site_prices || '{}',
+              site_urls || '{}',
+              best_site || 'unknown',
+              price_spread_percent || 0,
+              total_sites || 1,
+              image_url || null,
+              key
+            ).run();
+
+            if (updateResult.meta.changes === 0) {
+              return new Response(JSON.stringify({ error: 'Failed to update product' }), {
+                status: 500,
+                headers: corsHeaders
+              });
+            }
+
+          } else {
+            // 新商品を作成
+            const insertResult = await env.DB.prepare(
+              `INSERT INTO products (
+                 key, name, url, current_price, currency,
+                 site_prices, site_urls, best_site,
+                 price_spread_percent, total_sites, image_url,
+                 enabled, created_at, updated_at
+               ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`
+            ).bind(
+              key,
+              name || 'Multi-site Product',
+              'https://multi-site-product.local', // プレースホルダーURL
+              current_price || 0,
+              currency || 'JPY',
+              site_prices || '{}',
+              site_urls || '{}',
+              best_site || 'unknown',
+              price_spread_percent || 0,
+              total_sites || 1,
+              image_url || null
+            ).run();
+
+            productId = insertResult.meta.last_row_id;
+          }
+
+          // 価格履歴に追加
+          await env.DB.prepare(
+            "INSERT INTO price_history (product_id, price, currency, recorded_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP)"
+          ).bind(productId, current_price, currency || 'JPY').run();
+
+          return new Response(JSON.stringify({
+            success: true,
+            message: 'Multi-site product updated successfully',
+            productId: productId,
+            key: key,
+            name: name,
+            bestPrice: current_price,
+            bestSite: best_site,
+            totalSites: total_sites,
+            priceSpread: price_spread_percent
+          }), {
+            headers: corsHeaders
+          });
+
+        } catch (error) {
+          console.error('Multi-site product update error:', error);
+          return new Response(JSON.stringify({
+            error: 'Failed to update multi-site product',
+            details: error.message
+          }), {
+            status: 500,
+            headers: corsHeaders
+          });
+        }
       }
 
       // 商品検索

@@ -7,7 +7,13 @@
     "check-prices": "node cloudflare/price-checker.js",
     "compare-prices": "node cloudflare/multi-site-price-checker.js",
     "compare-product": "node cloudflare/multi-site-price-checker.js compare",
+    "update-parallel": "node cloudflare/multi-site-parallel-updater.js",
+    "update-product": "node cloudflare/multi-site-parallel-updater.js update",
+    "update-prices": "node cloudflare/dynamic-price-updater.js",
+    "update-price": "node cloudflare/dynamic-price-updater.js update",
     "list-sites": "node cloudflare/multi-site-price-checker.js sites",
+    "migrate-db": "cd cloudflare && node migrate_schema.js",
+    "migrate-db-remote": "cd cloudflare && node migrate_schema.js --remote",
     "deploy": "wrangler deploy",
     "dev": "wrangler dev",
     "test": "echo \"No tests yet\""

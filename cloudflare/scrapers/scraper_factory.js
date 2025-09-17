@@ -5,6 +5,7 @@
 
 import { BullionStarScraper } from './bullionstar_scraper.js';
 import { LPMScraper } from './lpm_scraper.js';
+import { APMEXScraper } from './apmex_scraper.js';
 
 export class ScraperFactory {
     constructor(browser) {
@@ -19,6 +20,8 @@ export class ScraperFactory {
     initializeScrapers() {
         this.scrapers.set('bullionstar.com', new BullionStarScraper(this.browser));
         this.scrapers.set('lpm.hk', new LPMScraper(this.browser));
+        // APMEXは地域制限のため一時的に無効化
+        // this.scrapers.set('apmex.com', new APMEXScraper(this.browser));
 
         console.log(`Initialized ${this.scrapers.size} scrapers: ${Array.from(this.scrapers.keys()).join(', ')}`);
     }
@@ -211,6 +214,12 @@ export const PRODUCT_MAPPINGS = {
             url: 'https://www.lpm.hk/en/products/silver-coins/canadian-maple-leaf-1oz',
             name: 'Canadian Silver Maple Leaf 1oz'
         }
+        // APMEXは地域制限のため一時的に無効化
+        // {
+        //     site: 'apmex.com',
+        //     url: 'https://www.apmex.com/product/1090/1-oz-canadian-silver-maple-leaf-coin-bu-random-year',
+        //     name: 'Canadian Silver Maple Leaf 1oz'
+        // }
     ],
     'american-gold-eagle-1oz': [
         {
@@ -223,6 +232,12 @@ export const PRODUCT_MAPPINGS = {
             url: 'https://www.lpm.hk/en/products/gold-coins/american-eagle-1oz',
             name: 'American Gold Eagle 1oz'
         }
+        // APMEXは地域制限のため一時的に無効化
+        // {
+        //     site: 'apmex.com',
+        //     url: 'https://www.apmex.com/product/99939/1-oz-american-gold-eagle-coin-bu-random-year',
+        //     name: 'American Gold Eagle 1oz'
+        // }
     ],
     'silver-bar-1kg': [
         {
@@ -235,6 +250,12 @@ export const PRODUCT_MAPPINGS = {
             url: 'https://www.lpm.hk/en/products/silver-bars/generic-1kg',
             name: 'Silver Bar 1kg'
         }
+        // APMEXは地域制限のため一時的に無効化
+        // {
+        //     site: 'apmex.com',
+        //     url: 'https://www.apmex.com/product/101098/1-kilo-silver-bar-secondary-market',
+        //     name: 'Silver Bar 1kg'
+        // }
     ]
 };
 

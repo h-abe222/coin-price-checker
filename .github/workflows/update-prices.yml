@@ -1,0 +1,44 @@
+name: 価格自動更新
+
+on:
+  schedule:
+    # 毎日 日本時間 9:00, 15:00, 21:00 に実行
+    - cron: '0 0,6,12 * * *'  # UTC時間
+  workflow_dispatch:  # GitHubから手動実行可能
+
+jobs:
+  update-prices:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: コード取得
+      uses: actions/checkout@v3
+
+    - name: Node.js セットアップ
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+
+    - name: 必要なツールをインストール
+      run: |
+        cd cloudflare
+        npm install
+        npx playwright install chromium
+        npx playwright install-deps chromium
+
+    - name: 価格更新実行
+      env:
+        CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      run: |
+        cd cloudflare
+        node update-prices-directly.js
+
+    - name: 実行結果
+      if: always()
+      run: |
+        if [ $? -eq 0 ]; then
+          echo "✅ 価格更新成功: $(TZ=Asia/Tokyo date '+%Y-%m-%d %H:%M:%S')"
+        else
+          echo "❌ 価格更新失敗: $(TZ=Asia/Tokyo date '+%Y-%m-%d %H:%M:%S')"
+        fi
