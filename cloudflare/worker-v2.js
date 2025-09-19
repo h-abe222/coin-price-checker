@@ -1747,13 +1747,14 @@ export default {
           };
 
           try {
-            // Vercel APIを使用（CORS制限を回避）
-            const VERCEL_API_URL = env.VERCEL_API_URL || 'https://coin-price-checker.vercel.app/api/fetch-price';
+            // 価格取得API（ローカルサーバーまたはVercel）
+            // ローカルテスト時は http://localhost:3456/api/fetch-price を使用
+            const PRICE_API_URL = env.PRICE_API_URL || env.VERCEL_API_URL || 'https://coin-price-checker.vercel.app/api/fetch-price';
 
-            if (VERCEL_API_URL) {
+            if (PRICE_API_URL) {
               try {
-                siteDebug.attempts.push({ method: 'vercel-api', status: 'trying' });
-                const response = await fetch(VERCEL_API_URL, {
+                siteDebug.attempts.push({ method: 'price-api', status: 'trying' });
+                const response = await fetch(PRICE_API_URL, {
                   method: 'POST',
                   headers: {
                     'Content-Type': 'application/json'

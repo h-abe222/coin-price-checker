@@ -1,0 +1,269 @@
+/**
+ * 価格取得サーバー v2 - 動作確認済みのコードベース
+ */
+
+import express from 'express';
+import { chromium } from 'playwright';
+import cors from 'cors';
+
+const app = express();
+app.use(cors());
+app.use(express.json());
+
+const PORT = 3456;
+
+// 為替レート
+const EXCHANGE_RATES = {
+  USD: 150,
+  HKD: 19,
+  SGD: 110,
+  EUR: 160,
+  GBP: 190
+};
+
+// ブラウザインスタンスを保持
+let browser = null;
+
+// ブラウザの初期化
+async function initBrowser() {
+  if (!browser) {
+    browser = await chromium.launch({
+      headless: true,
+      args: ['--no-sandbox', '--disable-setuid-sandbox']
+    });
+    console.log('Browser initialized');
+  }
+  return browser;
+}
+
+// 価格取得関数
+async function fetchPriceWithPlaywright(url, siteName) {
+  const browser = await initBrowser();
+  const context = await browser.newContext({
+    userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+  });
+
+  const page = await context.newPage();
+  let price = null;
+
+  try {
+    console.log(`Fetching price from: ${url}`);
+
+    // ページを開く
+    await page.goto(url, {
+      waitUntil: 'networkidle',
+      timeout: 30000
+    });
+
+    // サイト別の価格取得ロジック
+    if (url.includes('apmex.com')) {
+      console.log('Processing APMEX...');
+      await page.waitForTimeout(2000);
+
+      // 複数のセレクタを試す
+      const selectors = [
+        '[data-product-price]',
+        '.product-price',
+        '[itemprop="price"]',
+        '.price-value',
+        'meta[property="product:price:amount"]'
+      ];
+
+      for (const selector of selectors) {
+        try {
+          const element = await page.locator(selector).first();
+          if (await element.count() > 0) {
+            let priceText;
+
+            if (selector.startsWith('meta')) {
+              priceText = await element.getAttribute('content');
+            } else {
+              priceText = await element.getAttribute('data-product-price') ||
+                         await element.textContent();
+            }
+
+            if (priceText) {
+              const usdPrice = parseFloat(priceText.replace(/[^0-9.]/g, ''));
+              console.log(`Found USD price: $${usdPrice}`);
+
+              // 価格の妥当性チェック
+              if (usdPrice > 500 && usdPrice < 5000) {
+                price = Math.round(usdPrice * EXCHANGE_RATES.USD);
+                console.log(`APMEX price: $${usdPrice} → ¥${price}`);
+                break;
+              }
+            }
+          }
+        } catch (e) {
+          // このセレクタは存在しない
+        }
+      }
+    }
+
+    else if (url.includes('bullionstar.com')) {
+      console.log('Processing BullionStar...');
+
+      // 価格要素が表示されるまで待機
+      try {
+        await page.waitForSelector('.product-price-update', { timeout: 10000 });
+      } catch (e) {
+        console.log('Price element not found, continuing...');
+      }
+
+      await page.waitForTimeout(3000);
+
+      // 日本円価格を直接探す（BullionStarは日本からアクセスすると円表示）
+      const extractedPrice = await page.evaluate(() => {
+        const bodyText = document.body.innerText;
+        const yenPattern = /¥([\d,]+(?:\.\d{2})?)/g;
+        const matches = [...bodyText.matchAll(yenPattern)];
+
+        for (const match of matches) {
+          const p = parseFloat(match[1].replace(/,/g, ''));
+          // 金貨の妥当な価格範囲（20万〜40万円）
+          if (p > 200000 && p < 400000) {
+            return p;
+          }
+        }
+        return null;
+      });
+
+      if (extractedPrice) {
+        price = Math.round(extractedPrice);
+        console.log(`BullionStar price: ¥${price}`);
+      } else {
+        console.log('No valid BullionStar price found');
+      }
+    }
+
+    else if (url.includes('lpm.hk')) {
+      console.log('Processing LPM...');
+      await page.waitForTimeout(3000);
+
+      // Check if page loaded successfully
+      const pageTitle = await page.title();
+      if (pageTitle.includes('503') || pageTitle.includes('Error')) {
+        console.log('LPM returned error 503');
+        throw new Error('LPM site returned error 503');
+      }
+
+      // HKD価格を探す
+      const priceData = await page.evaluate(() => {
+        const bodyText = document.body.innerText;
+        const hkdPattern = /HK\$\s*([\d,]+\.?\d*)/g;
+        const matches = [...bodyText.matchAll(hkdPattern)];
+
+        for (const match of matches) {
+          const p = parseFloat(match[1].replace(/,/g, ''));
+          // 妥当な価格範囲
+          if (p > 5000 && p < 50000) {
+            return p;
+          }
+        }
+        return null;
+      });
+
+      if (priceData) {
+        price = Math.round(priceData * EXCHANGE_RATES.HKD);
+        console.log(`LPM price: HK$ ${priceData} → ¥${price}`);
+      } else {
+        console.log('No valid LPM price found');
+      }
+    }
+
+    else if (url.includes('ybx.jp')) {
+      console.log('Processing YBX...');
+      await page.waitForTimeout(3000);
+
+      // 日本円価格を探す
+      const jsPrice = await page.evaluate(() => {
+        const bodyText = document.body.innerText;
+        const yenPattern = /([\d,]+)円/g;
+        const matches = [...bodyText.matchAll(yenPattern)];
+
+        for (const match of matches) {
+          const p = parseInt(match[1].replace(/,/g, ''));
+          // 金貨の妥当な価格範囲
+          if (p > 100000 && p < 1000000) {
+            return p;
+          }
+        }
+        return null;
+      });
+
+      if (jsPrice) {
+        price = jsPrice;
+        console.log(`YBX price: ¥${price}`);
+      } else {
+        console.log('No valid YBX price found');
+      }
+    }
+
+  } catch (error) {
+    console.error(`Error fetching price: ${error.message}`);
+  } finally {
+    await context.close();
+  }
+
+  return price;
+}
+
+// APIエンドポイント
+app.post('/api/fetch-price', async (req, res) => {
+  const { url, siteName } = req.body;
+
+  if (!url) {
+    return res.status(400).json({
+      success: false,
+      error: 'URL is required'
+    });
+  }
+
+  try {
+    const price = await fetchPriceWithPlaywright(url, siteName);
+
+    if (price) {
+      res.json({
+        success: true,
+        price: price,
+        currency: 'JPY',
+        siteName: siteName,
+        timestamp: new Date().toISOString()
+      });
+    } else {
+      res.json({
+        success: false,
+        error: 'Price not found',
+        siteName: siteName
+      });
+    }
+  } catch (error) {
+    res.json({
+      success: false,
+      error: error.message,
+      siteName: siteName
+    });
+  }
+});
+
+// ヘルスチェック
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+// サーバー起動
+app.listen(PORT, () => {
+  console.log(`Price fetch server v2 running on http://localhost:${PORT}`);
+  initBrowser().catch(err => {
+    console.error('Failed to initialize browser:', err);
+  });
+});
+
+// 終了処理
+process.on('SIGINT', async () => {
+  console.log('Closing browser...');
+  if (browser) {
+    await browser.close();
+  }
+  process.exit();
+});
