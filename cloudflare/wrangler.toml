@@ -3,7 +3,7 @@ main = "worker-v2.js"
 compatibility_date = "2024-01-01"
 
 [env.production]
-vars = { ADMIN_PASSWORD = "admin123", VERCEL_API_URL = "https://coni-price-checker.vercel.app/api/fetch-price" }
+vars = { ADMIN_PASSWORD = "admin123", VERCEL_API_URL = "https://coni-price-checker.vercel.app/api/fetch-price-v2" }
 
 [[env.production.kv_namespaces]]
 binding = "PRODUCTS"
