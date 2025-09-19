@@ -56,7 +56,7 @@ export default async function handler(req, res) {
     // ページ読み込み
     const waitUntil = url.includes('apmex.com') ? 'domcontentloaded' : 'networkidle2';
     await page.goto(url, { waitUntil, timeout: 30000 });
-    await page.waitForTimeout(3000);
+    await new Promise(resolve => setTimeout(resolve, 3000));
 
     let price = null;
 
@@ -80,7 +80,7 @@ export default async function handler(req, res) {
     // APMEX - USD表示
     else if (url.includes('apmex.com')) {
       // APMEXは価格読み込みに時間がかかる（8秒待機）
-      await page.waitForTimeout(8000);
+      await new Promise(resolve => setTimeout(resolve, 8000));
 
       const usdPrice = await page.evaluate(() => {
         const bodyText = document.body.innerText;
