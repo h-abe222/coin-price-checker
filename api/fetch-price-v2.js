@@ -103,31 +103,58 @@ export default async function handler(req, res) {
         const matches = [...bodyText.matchAll(usdPattern)];
 
         // URLから商品タイプを判定
-        let minPrice, maxPrice;
-        if (pageUrl.includes('1-oz') || pageUrl.includes('one-ounce')) {
-          // 1オンス金貨
-          minPrice = 2500;
-          maxPrice = 3500;
-        } else if (pageUrl.includes('1-2-oz') || pageUrl.includes('half-ounce')) {
+        let minPrice, maxPrice, preferHighest = false;
+
+        // URLパターンのチェックを厳密に
+        const is1oz = pageUrl.includes('/1-oz-') ||
+                      pageUrl.includes('-1-oz-') ||
+                      pageUrl.includes('one-ounce');
+        const isHalfOz = pageUrl.includes('/1-2-oz-') ||
+                         pageUrl.includes('-1-2-oz-') ||
+                         pageUrl.includes('half-ounce');
+        const isQuarterOz = pageUrl.includes('/1-4-oz-') ||
+                            pageUrl.includes('-1-4-oz-') ||
+                            pageUrl.includes('quarter-ounce');
+
+        if (is1oz) {
+          // 1オンス金貨（現在の金価格を考慮して調整）
+          minPrice = 2600;
+          maxPrice = 2900;
+          preferHighest = true; // 1オンスの場合は高い価格を優先
+        } else if (isHalfOz) {
           // 1/2オンス金貨
           minPrice = 1300;
-          maxPrice = 1800;
-        } else if (pageUrl.includes('1-4-oz') || pageUrl.includes('quarter-ounce')) {
+          maxPrice = 1450;
+        } else if (isQuarterOz) {
           // 1/4オンス金貨
           minPrice = 650;
-          maxPrice = 900;
+          maxPrice = 750;
         } else {
           // デフォルト（広めの範囲）
           minPrice = 500;
-          maxPrice = 3500;
+          maxPrice = 3000;
         }
 
+        // 価格候補を収集
+        const validPrices = [];
         for (const match of matches) {
           const price = parseFloat(match[1].replace(/,/g, ''));
           if (price > minPrice && price < maxPrice) {
-            return price;
+            validPrices.push(price);
           }
         }
+
+        // 価格の選択ロジック
+        if (validPrices.length > 0) {
+          if (preferHighest) {
+            // 1オンスの場合は最も高い価格を返す（メイン商品の可能性が高い）
+            return Math.max(...validPrices);
+          } else {
+            // その他の場合は最初に見つかった価格を返す
+            return validPrices[0];
+          }
+        }
+
         return null;
       }, url);
 
