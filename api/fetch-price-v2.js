@@ -60,21 +60,36 @@ export default async function handler(req, res) {
 
     let price = null;
 
-    // BullionStar - 日本円で表示される
+    // BullionStar - SGDで表示される
     if (url.includes('bullionstar.com')) {
-      price = await page.evaluate(() => {
+      const sgdPrice = await page.evaluate(() => {
         const text = document.body.innerText;
-        const matches = text.match(/¥([\d,]+(?:\.\d{2})?)/g);
-        if (matches) {
-          for (const match of matches) {
-            const value = parseFloat(match.replace(/[¥,]/g, ''));
-            if (value > 200000 && value < 400000) {
-              return Math.round(value);
+        // SGD価格を探す（例：SGD 2,345.67 または S$ 2,345.67）
+        const patterns = [
+          /SGD\s*([\d,]+\.?\d*)/g,
+          /S\$\s*([\d,]+\.?\d*)/g,
+          /\$\s*([\d,]+\.?\d*)/g  // SGDページではドル記号のみの場合も
+        ];
+
+        for (const pattern of patterns) {
+          const matches = text.match(pattern);
+          if (matches) {
+            for (const match of matches) {
+              const value = parseFloat(match.replace(/[^\d.]/g, ''));
+              // 1/2オンス金貨の適正価格範囲（SGD 2,000-3,500）
+              if (value > 2000 && value < 3500) {
+                return value;
+              }
             }
           }
         }
         return null;
       });
+
+      if (sgdPrice) {
+        price = Math.round(sgdPrice * EXCHANGE_RATES.SGD);
+        console.log(`SGD ${sgdPrice} → JPY ${price}`);
+      }
     }
 
     // APMEX - USD表示
