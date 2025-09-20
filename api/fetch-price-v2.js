@@ -97,20 +97,39 @@ export default async function handler(req, res) {
       // APMEXは価格読み込みに時間がかかる（8秒待機）
       await new Promise(resolve => setTimeout(resolve, 8000));
 
-      const usdPrice = await page.evaluate(() => {
+      const usdPrice = await page.evaluate((pageUrl) => {
         const bodyText = document.body.innerText;
         const usdPattern = /\$([\d,]+\.\d{2})/g;
         const matches = [...bodyText.matchAll(usdPattern)];
 
+        // URLから商品タイプを判定
+        let minPrice, maxPrice;
+        if (pageUrl.includes('1-oz') || pageUrl.includes('one-ounce')) {
+          // 1オンス金貨
+          minPrice = 2500;
+          maxPrice = 3500;
+        } else if (pageUrl.includes('1-2-oz') || pageUrl.includes('half-ounce')) {
+          // 1/2オンス金貨
+          minPrice = 1300;
+          maxPrice = 1800;
+        } else if (pageUrl.includes('1-4-oz') || pageUrl.includes('quarter-ounce')) {
+          // 1/4オンス金貨
+          minPrice = 650;
+          maxPrice = 900;
+        } else {
+          // デフォルト（広めの範囲）
+          minPrice = 500;
+          maxPrice = 3500;
+        }
+
         for (const match of matches) {
           const price = parseFloat(match[1].replace(/,/g, ''));
-          // 1/2オンス金貨の適正範囲
-          if (price > 1000 && price < 3000) {
+          if (price > minPrice && price < maxPrice) {
             return price;
           }
         }
         return null;
-      });
+      }, url);
 
       if (usdPrice) {
         price = Math.round(usdPrice * EXCHANGE_RATES.USD);
